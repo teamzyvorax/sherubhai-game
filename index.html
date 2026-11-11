@@ -35,12 +35,41 @@ for(let i=-90;i<=90;i+=12){box(i,.025,0,.18,.02,5,0xe6c56c);box(0,.025,i,5,.02,.
 for(let x=-84;x<=84;x+=24)for(let z=-84;z<=84;z+=24){if(Math.abs(x)<17||Math.abs(z)<17)continue;let h=8+Math.random()*18,w=9+Math.random()*5,d=9+Math.random()*5;let colors=[0xb66f51,0xd1b78d,0x778b9a,0xb7a16e,0x8d7771];box(x,h/2,z,w,h,d,colors[Math.floor(Math.random()*colors.length)]);box(x,h+.4,z,w+.3,.7,d+.3,0x454b54);for(let yy=3;yy<h-2;yy+=3)for(let xx=-w/2+2;xx<w/2;xx+=3)box(x+xx,yy,z-d/2-.04,1.1,1.25,.08,0x8bd0d8)}
 for(let i=0;i<65;i++){let x=(Math.random()-.5)*190,z=(Math.random()-.5)*190;if(Math.abs(x)<11||Math.abs(z)<11)continue;let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,2,7),mat(0x60452d));trunk.position.set(x,1,z);scene.add(trunk);let crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.5+Math.random(),1),mat(0x356c45));crown.position.set(x,3,z);crown.castShadow=true;scene.add(crown)}
 // player: complete stylized human body with articulated limbs
-function makePerson(shirt,pants,skin=0xb97854){let g=new THREE.Group();const add=(geo,c,x,y,z)=>{let m=new THREE.Mesh(geo,mat(c));m.position.set(x,y,z);m.castShadow=true;g.add(m);return m};add(new THREE.SphereGeometry(.34,16,12),skin,0,1.72,0);add(new THREE.CylinderGeometry(.13,.15,.16,12),skin,0,1.36,0);add(new THREE.BoxGeometry(.76,.86,.38),shirt,0,.91,0);add(new THREE.BoxGeometry(.28,.72,.3),pants,-.2,.14,0);add(new THREE.BoxGeometry(.28,.72,.3),pants,.2,.14,0);let arms=[];for(let s of [-1,1]){let pivot=new THREE.Group();pivot.position.set(s*.48,1.18,0);g.add(pivot);let arm=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.68,10),mat(shirt));arm.position.y=-.28;arm.castShadow=true;pivot.add(arm);let hand=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),mat(skin));hand.position.y=-.63;pivot.add(hand);arms.push(pivot)}add(new THREE.BoxGeometry(.32,.14,.48),0x282a2d,-.2,-.24,.06);add(new THREE.BoxGeometry(.32,.14,.48),0x282a2d,.2,-.24,.06);return {g,arms}}
+function makePerson(shirt,pants,skin=0xb97854){
+ const root=new THREE.Group(), torso=new THREE.Group();root.add(torso);
+ const material=(c,r=.82)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+ const part=(parent,geo,c,x,y,z)=>{const m=new THREE.Mesh(geo,material(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ // torso, neck and head are separate so the body can move naturally
+ part(torso,new THREE.BoxGeometry(.68,.76,.34),shirt,0,1.03,0);
+ part(torso,new THREE.BoxGeometry(.72,.12,.37),shirt,0,1.39,0);
+ part(torso,new THREE.CylinderGeometry(.12,.13,.16,12),skin,0,1.48,0);
+ const head=new THREE.Group();head.position.set(0,1.72,0);torso.add(head);
+ part(head,new THREE.SphereGeometry(.29,20,16),skin,0,0,0);
+ part(head,new THREE.SphereGeometry(.30,16,10,0,Math.PI*2,0,Math.PI*.48),0x171411,0,.11,-.015);
+ for(const ex of [-.105,.105]){part(head,new THREE.SphereGeometry(.027,8,8),0x171717,ex,.015,.26);part(head,new THREE.SphereGeometry(.012,8,8),0xffffff,ex-.008,.022,.282)}
+ part(head,new THREE.BoxGeometry(.08,.035,.035),0x493027,0,-.105,.27);
+ const arms=[],legs=[];
+ for(const side of [-1,1]){
+  const shoulder=new THREE.Group();shoulder.position.set(side*.39,1.34,0);torso.add(shoulder);
+  part(shoulder,new THREE.CapsuleGeometry(.105,.38,4,8),shirt,0,-.25,0);
+  const elbow=new THREE.Group();elbow.position.set(0,-.47,0);shoulder.add(elbow);
+  part(elbow,new THREE.CapsuleGeometry(.085,.28,4,8),skin,0,-.17,.005);
+  part(elbow,new THREE.SphereGeometry(.095,10,8),skin,0,-.34,.015);
+  arms.push({shoulder,elbow});
+  const hip=new THREE.Group();hip.position.set(side*.19,.68,0);root.add(hip);
+  part(hip,new THREE.CapsuleGeometry(.135,.38,4,8),pants,0,-.25,0);
+  const knee=new THREE.Group();knee.position.set(0,-.49,0);hip.add(knee);
+  part(knee,new THREE.CapsuleGeometry(.105,.28,4,8),pants,0,-.17,0);
+  part(knee,new THREE.BoxGeometry(.25,.13,.42),0x24272b,0,-.37,.1);
+  legs.push({hip,knee});
+ }
+ return {g:root,torso,head,arms,legs};
+}
 const player=makePerson(0x1e344b,0x22252e,0x9d6549);scene.add(player.g);player.g.position.set(0,0,5);
 // Character detail: hair, eyes, shoes and jacket accents
 const hair=new THREE.Mesh(new THREE.SphereGeometry(.35,16,10,0,Math.PI*2,0,Math.PI*.48),mat(0x171717));hair.position.set(0,1.91,-.015);player.g.add(hair);
 for(const ex of [-.115,.115]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,8,8),mat(0x171717));eye.position.set(ex,1.76,.29);player.g.add(eye)}
-const collar=new THREE.Mesh(new THREE.BoxGeometry(.3,.09,.405),mat(0xdaa85d));collar.position.set(0,1.29,.015);player.g.add(collar);
+const collar=new THREE.Mesh(new THREE.BoxGeometry(.34,.07,.37),mat(0xdaa85d));collar.position.set(0,1.42,.015);player.torso.add(collar);
 
 let rivals=[];for(let i=0;i<7;i++){let p=makePerson([0x8b302b,0x6b4d92,0x9a6d24,0x326c68][i%4],0x24252c);p.g.position.set((Math.random()-.5)*65,0,(Math.random()-.5)*65);if(Math.abs(p.g.position.x)<13&&Math.abs(p.g.position.z)<13)p.g.position.x+=20;p.hp=100;p.cool=0;p.hit=false;scene.add(p.g);rivals.push(p)}
 // Street furniture, sidewalks and moving traffic add scale and life
@@ -54,14 +83,27 @@ let hp=100,stamina=100,coins=0,cards=0,defeated=0;const keys={};let yaw=0,pitch=
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')e.preventDefault();if(e.key.toLowerCase()==='f')fight();if(e.key.toLowerCase()==='e')interact()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 let dragging=false,lastX=0;renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointerup',()=>dragging=false);renderer.domElement.addEventListener('pointermove',e=>{if(dragging){yaw-=(e.clientX-lastX)*.006;lastX=e.clientX}});
 function toast(t){let el=document.querySelector('#toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
-function fight(){if(attack>0)return;attack=.42;player.arms[0].rotation.x=-1.6;player.arms[1].rotation.x=-1.6;let near=rivals.filter(r=>r.hp>0&&r.g.position.distanceTo(player.g.position)<3.1).sort((a,b)=>a.g.position.distanceTo(player.g.position)-b.g.position.distanceTo(player.g.position))[0];if(near){near.hp-=35;near.g.rotation.y=Math.atan2(player.g.position.x-near.g.position.x,player.g.position.z-near.g.position.z);if(near.hp<=0){defeated++;coins+=25;toast('Rival defeated! +25 coins');document.querySelector('#progress').textContent='Rivals defeated: '+defeated+' / 3';if(defeated>=3)document.querySelector('#mission').textContent='Mission complete! Find all 5 legend cards.'}}else toast('No rival in range — move closer')}
+function fight(){if(attack>0)return;attack=.52;player.arms[0].shoulder.rotation.x=-1.9;player.arms[0].shoulder.rotation.z=-.28;let near=rivals.filter(r=>r.hp>0&&r.g.position.distanceTo(player.g.position)<3.1).sort((a,b)=>a.g.position.distanceTo(player.g.position)-b.g.position.distanceTo(player.g.position))[0];if(near){near.hp-=35;near.g.rotation.y=Math.atan2(player.g.position.x-near.g.position.x,player.g.position.z-near.g.position.z);if(near.hp<=0){defeated++;coins+=25;toast('Rival defeated! +25 coins');document.querySelector('#progress').textContent='Rivals defeated: '+defeated+' / 3';if(defeated>=3)document.querySelector('#mission').textContent='Mission complete! Find all 5 legend cards.'}}else toast('No rival in range — move closer')}
 function interact(){let i=pickups.findIndex(p=>p.visible&&p.position.distanceTo(player.g.position)<3.2);if(i>=0){pickups[i].visible=false;cards++;coins+=10;document.querySelector('#cards').textContent=cards;document.querySelector('#cardlabel').textContent=cards+' / 5';document.querySelector('#coins').textContent=coins;toast('Legend card collected! +10 coins')}else toast('Explore the city to find glowing cards')}
-function move(dir,dt){let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));let v=forward.multiplyScalar(dir.z).add(right.multiplyScalar(dir.x));if(v.lengthSq()>0)v.normalize();let sprint=keys.shift&&stamina>1;let speed=sprint?10:5.5;if(sprint)stamina=Math.max(0,stamina-25*dt);else stamina=Math.min(100,stamina+14*dt);player.g.position.addScaledVector(v,speed*dt);if(v.lengthSq()>.01){player.g.rotation.y=Math.atan2(v.x,v.z);player.g.children[2].rotation.x=Math.sin(performance.now()*.012)*.12;player.g.children[3].rotation.x=-Math.sin(performance.now()*.012)*.12}}
-function loop(){requestAnimationFrame(loop);let dt=Math.min(.04,clock.getDelta());let x=(keys.d?1:0)-(keys.a?1:0),z=(keys.s?1:0)-(keys.w?1:0);move({x,z},dt);if(keys[' ' ]&&jump===0){velocityY=7;jump=1}player.g.position.y+=velocityY*dt;velocityY-=19*dt;if(player.g.position.y<0){player.g.position.y=0;velocityY=0;jump=0}if(attack>0){attack-=dt;if(attack<=0)player.arms.forEach(a=>a.rotation.x=0)}
+function move(dir,dt){
+ let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ let v=forward.multiplyScalar(dir.z).add(right.multiplyScalar(dir.x));if(v.lengthSq()>0)v.normalize();
+ let sprint=keys.shift&&stamina>1;let speed=sprint?9:4.8;
+ if(sprint&&v.lengthSq()>.01)stamina=Math.max(0,stamina-25*dt);else stamina=Math.min(100,stamina+14*dt);
+ // Keep the player inside the playable district
+ const next=player.g.position.clone().addScaledVector(v,speed*dt);
+ if(Math.abs(next.x)<101)player.g.position.x=next.x;if(Math.abs(next.z)<101)player.g.position.z=next.z;
+ if(v.lengthSq()>.01){player.g.rotation.y=Math.atan2(v.x,v.z);const gait=performance.now()*(sprint?.014:.010);const amount=sprint?.85:.58;
+  player.legs[0].hip.rotation.x=Math.sin(gait)*amount;player.legs[1].hip.rotation.x=-Math.sin(gait)*amount;
+  player.arms[0].shoulder.rotation.x=-Math.sin(gait)*amount*.55;player.arms[1].shoulder.rotation.x=Math.sin(gait)*amount*.55;
+  player.torso.rotation.z=Math.sin(gait*2)*.025;
+ }else{player.legs.forEach(l=>l.hip.rotation.x=THREE.MathUtils.damp(l.hip.rotation.x,0,9,dt));player.arms.forEach(a=>{if(attack<=0)a.shoulder.rotation.x=THREE.MathUtils.damp(a.shoulder.rotation.x,0,9,dt)});player.torso.rotation.z=THREE.MathUtils.damp(player.torso.rotation.z,0,8,dt)}
+}
+function loop(){requestAnimationFrame(loop);let dt=Math.min(.04,clock.getDelta());let x=(keys.d?1:0)-(keys.a?1:0),z=(keys.s?1:0)-(keys.w?1:0);move({x,z},dt);if(keys[' ' ]&&jump===0){velocityY=7;jump=1}player.g.position.y+=velocityY*dt;velocityY-=19*dt;if(player.g.position.y<0){player.g.position.y=0;velocityY=0;jump=0}if(attack>0){attack-=dt;if(attack<=0)player.arms.forEach(a=>{a.shoulder.rotation.x=0;a.shoulder.rotation.z=0})}
 for(let r of rivals){if(r.hp<=0)continue;let d=r.g.position.distanceTo(player.g.position);if(d<13){r.g.lookAt(player.g.position.x,0,player.g.position.z);if(d>2.1){r.g.position.x+=(player.g.position.x-r.g.position.x)*dt*.45;r.g.position.z+=(player.g.position.z-r.g.position.z)*dt*.45}else{r.cool-=dt;if(r.cool<=0){r.cool=1.4;hp=Math.max(0,hp-7);toast('You were hit!')} }}}
 for(const car of traffic){if(car.userData.axis===0){car.position.x+=dt*7;if(car.position.x>105)car.position.x=-105}else{car.position.z+=dt*7;if(car.position.z>105)car.position.z=-105}}
 for(let p of pickups)if(p.visible){p.rotation.y+=dt*1.5;p.position.y=.9+Math.sin(performance.now()*.002+p.position.x)*.18}
-let target=new THREE.Vector3(player.g.position.x+Math.sin(yaw)*10,player.g.position.y+5.2+pitch*5,player.g.position.z+Math.cos(yaw)*10);camera.position.lerp(target,.1);camera.lookAt(player.g.position.x,player.g.position.y+1.1,player.g.position.z);
+let target=new THREE.Vector3(player.g.position.x+Math.sin(yaw)*8.5,player.g.position.y+4.4+pitch*4,player.g.position.z+Math.cos(yaw)*8.5);camera.position.lerp(target,1-Math.exp(-7*dt));camera.lookAt(player.g.position.x,player.g.position.y+1.1,player.g.position.z);
 document.querySelector('#hp').style.width=hp+'%';document.querySelector('#hpnum').textContent=hp;document.querySelector('#st').style.width=stamina+'%';document.querySelector('#stnum').textContent=Math.round(stamina);renderer.render(scene,camera)}
 const clock=new THREE.Clock();document.querySelector('#play').onclick=()=>{document.querySelector('#start').remove();loop()};
 document.querySelector('#hit').onclick=fight;document.querySelector('#jump').onclick=()=>{if(jump===0){velocityY=7;jump=1}};document.querySelector('#run').onpointerdown=()=>keys.shift=true;document.querySelector('#run').onpointerup=()=>keys.shift=false;
